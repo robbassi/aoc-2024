@@ -13,9 +13,6 @@ struct vec {
 
 typedef struct vec vec_t;
 
-vec_t vec_a = {};
-vec_t vec_b = {};
-
 void vec_resize(vec_t *vec) {
   switch (vec->size) {
     case 0:
@@ -33,7 +30,6 @@ void vec_add(vec_t *vec, int x) {
   if (vec->count == vec->size) {
     vec_resize(vec);
   }
-
   vec->data[vec->count++] = x;
 }
 
@@ -42,8 +38,8 @@ int compare_int(const void *a, const void *b) {
 }
 
 int main(int argc, char **argv) {
-  int total_distance = 0;
-  int similarity_score = 0;
+  vec_t vec_a = {};
+  vec_t vec_b = {};
 
   // Build the lists.
   int a, b;
@@ -58,11 +54,13 @@ int main(int argc, char **argv) {
   qsort(vec_b.data, vec_b.count, sizeof(int), compare_int);
 
   // Compute the distance.
+  int total_distance = 0;
   for (int i = 0; i < vec_a.count; i++) {
     total_distance += abs(vec_a.data[i] - vec_b.data[i]);
   }
 
   // Compute the similarity score.
+  int similarity_score = 0;
   int freq, j = 0, last_a = -1;
   for (int i = 0; i < vec_a.count; i++) {
     int a = vec_a.data[i];
@@ -78,7 +76,7 @@ int main(int argc, char **argv) {
     last_a = a;
   }
 
-  // Output
+  // Output.
   printf("%d\n", total_distance);
   printf("%d\n", similarity_score);
   return EXIT_SUCCESS;
