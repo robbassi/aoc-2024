@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define DEFAULT_LIST_SIZE 1024
+#define DEFAULT_LIST_SIZE 512
 #define LIST_GROWTH_FACTOR 2
 
 struct vec {
@@ -38,8 +38,8 @@ int compare_int(const void *a, const void *b) {
 }
 
 int main(int argc, char **argv) {
-  vec_t vec_a = {};
-  vec_t vec_b = {};
+  vec_t vec_a = {0};
+  vec_t vec_b = {0};
 
   // Build the lists.
   int a, b;
