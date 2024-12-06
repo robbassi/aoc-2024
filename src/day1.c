@@ -1,37 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-
-#define DEFAULT_LIST_SIZE 512
-#define LIST_GROWTH_FACTOR 2
-
-struct vec {
-  int *data;
-  size_t count;
-  size_t size;
-};
-
-typedef struct vec vec_t;
-
-void vec_resize(vec_t *vec) {
-  switch (vec->size) {
-    case 0:
-      vec->size = DEFAULT_LIST_SIZE;
-      vec->data = malloc(vec->size * sizeof(int));
-      break;
-    default:
-      vec->size = vec->size * LIST_GROWTH_FACTOR;
-      vec->data = realloc(vec->data, vec->size * sizeof(int));
-      break;
-  }
-}
-
-void vec_add(vec_t *vec, int x) {
-  if (vec->count == vec->size) {
-    vec_resize(vec);
-  }
-  vec->data[vec->count++] = x;
-}
+#include "vec.h"
 
 int compare_int(const void *a, const void *b) {
   return *(int*)a - *(int*)b;
