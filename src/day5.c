@@ -39,9 +39,7 @@ void vec_clear(vec_t *vec) {
 }
 
 #define MAX_PAGES 100
-
 int before[MAX_PAGES][MAX_PAGES];
-bool visited[MAX_PAGES];
 
 int compare_page(const void *p1, const void *p2) {
   int page1 = *(int*)p1;
@@ -63,8 +61,6 @@ void parseRules() {
   fgets(line, BUFF_SIZE, stdin);
   while (sscanf(line, "%d|%d", &x, &y) == 2) {
     before[x][y] = 1;
-    visited[x] = true;
-    visited[y] = true;
     fgets(line, BUFF_SIZE, stdin);
   }
 }
