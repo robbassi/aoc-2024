@@ -24,10 +24,12 @@ int compare_page(const void *p1, const void *p2) {
 void parseRules() {
   int x, y;
   char line[BUFF_SIZE];
-  fgets(line, BUFF_SIZE, stdin);
-  while (sscanf(line, "%d|%d", &x, &y) == 2) {
-    before[x][y] = 1;
-    fgets(line, BUFF_SIZE, stdin);
+  while (fgets(line, BUFF_SIZE, stdin)) {
+    if (sscanf(line, "%d|%d", &x, &y) == 2) {
+      before[x][y] = 1;
+    } else {
+      break;
+    }
   }
 }
 
