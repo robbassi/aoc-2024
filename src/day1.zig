@@ -1,4 +1,7 @@
 const std = @import("std");
+const c = @cImport({
+    @cInclude("stdio.h");
+});
 
 pub fn processInput(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) void {
     var buf: [1024]u8 = undefined;
@@ -15,13 +18,29 @@ pub fn processInput(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std
     }
 }
 
+pub fn processInputWithScanf(list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) !void {
+    var a: i32 = 0;
+    var b: i32 = 0;
+    while (c.scanf("%d   %d", &a, &b) == 2) {
+        try list_a.append(a);
+        try list_b.append(b);
+    }
+}
+
 pub fn main() !void {
     var list_a = try std.ArrayList(i32).initCapacity(std.heap.page_allocator, 1024);
     var list_b = try std.ArrayList(i32).initCapacity(std.heap.page_allocator, 1024);
-    const stdin = std.io.getStdIn();
 
     // Build the lists.
-    processInput(stdin, &list_a, &list_b);
+    if (std.os.argv.len == 1) {
+        // Up to 4x faster than using the Reader approach, and matches C
+        // performance.
+        try processInputWithScanf(&list_a, &list_b);
+    } else {
+        // If we have an extra arg, use the old approach.
+        const stdin = std.io.getStdIn();
+        processInput(stdin, &list_a, &list_b);
+    }
     std.debug.assert(list_a.items.len == list_b.items.len);
 
     // Sort the data.
