@@ -2,8 +2,9 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("stdio.h");
 });
+const File = std.fs.File;
 
-pub fn processInput(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) void {
+pub fn processInput(file: File, list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) !void {
     var buf: [1024]u8 = undefined;
     const reader = file.reader();
     read: while (true) {
@@ -13,8 +14,8 @@ pub fn processInput(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std
         _ = it.next();
         _ = it.next();
         const b = std.fmt.parseInt(i32, it.next().?, 10) catch unreachable;
-        list_a.append(a) catch unreachable;
-        list_b.append(b) catch unreachable;
+        try list_a.append(a);
+        try list_b.append(b);
     }
 }
 
@@ -27,19 +28,127 @@ pub fn processInputWithScanf(list_a: *std.ArrayList(i32), list_b: *std.ArrayList
     }
 }
 
+/// A buffered, character reader. This is a low-effort implementation, there's
+/// probably room for improvement.
+fn BufferedCharReader(comptime buff_size: usize) type {
+    return struct {
+        const Self = @This();
+
+        done: bool,
+        index: usize,
+        size: usize,
+        file: File,
+        buff: [buff_size]u8,
+
+        pub fn init(file: File) Self {
+            return .{
+                .done = false,
+                .index = 0,
+                .size = 0,
+                .file = file,
+                .buff = undefined,
+            };
+        }
+
+        fn fillBuff(self: *Self) !void {
+            self.size = try self.file.read(&self.buff);
+        }
+
+        pub fn getChar(self: *Self) ?u8 {
+            // Noop.
+            if (self.done) return null;
+
+            // Fill the buffer.
+            if (self.index == self.size) {
+                self.fillBuff() catch unreachable;
+                self.index = 0;
+                if (self.size == 0) {
+                    self.done = true;
+                    return null;
+                }
+            }
+
+            const char = self.buff[self.index];
+            self.index += 1;
+            return char;
+        }
+
+        pub fn skip(self: *Self, n: usize) void {
+            for (0..n) |_| {
+                _ = self.getChar();
+            }
+        }
+    };
+}
+
+/// Process input using the BufferedCharReader.
+pub fn processInputWithCustomReader(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) !void {
+    const Reader = BufferedCharReader(1024);
+    var reader = Reader.init(file);
+    while (!reader.done) {
+        var a: i32 = 0;
+        var b: i32 = 0;
+
+        // Read a.
+        while (reader.getChar()) |char| {
+            switch (char) {
+                '0'...'9' => a = (char - 48) + a * 10,
+                else => {
+                    try list_a.append(a);
+                    break;
+                },
+            }
+        }
+
+        // Skip spaces.
+        reader.skip(2);
+
+        // Read b.
+        while (reader.getChar()) |char| {
+            switch (char) {
+                '0'...'9' => b = (char - 48) + b * 10,
+                else => {
+                    try list_b.append(b);
+                    break;
+                },
+            }
+        }
+    }
+}
+
+pub fn printUsage(prog_name: [*:0]u8) void {
+    std.debug.print("Usage: {s} [scanf|reader]\n", .{prog_name});
+}
+
 pub fn main() !void {
     var list_a = try std.ArrayList(i32).initCapacity(std.heap.page_allocator, 1024);
     var list_b = try std.ArrayList(i32).initCapacity(std.heap.page_allocator, 1024);
+    const stdin = std.io.getStdIn();
 
     // Build the lists.
-    if (std.os.argv.len == 1) {
-        // Up to 4x faster than using the Reader approach, and matches C
-        // performance.
-        try processInputWithScanf(&list_a, &list_b);
-    } else {
-        // If we have an extra arg, use the old approach.
-        const stdin = std.io.getStdIn();
-        processInput(stdin, &list_a, &list_b);
+    switch (std.os.argv.len) {
+        // Use custom reader. As fast as the C version, but in pure Zig.
+        1 => try processInputWithCustomReader(stdin, &list_a, &list_b),
+        2 => {
+            const mode_str = std.os.argv[1];
+            const mode: []const u8 = std.mem.span(mode_str);
+            if (std.mem.eql(u8, mode, "scanf")) {
+                // Up to 4x faster than using the Reader approach, and matches C
+                // performance.
+                try processInputWithScanf(&list_a, &list_b);
+            } else if (std.mem.eql(u8, mode, "reader")) {
+                // Uses the std.io.Reader, and std.fmt.parseInt. This was the way
+                // I approached it initially, seemed the most "correct".
+                try processInput(stdin, &list_a, &list_b);
+            } else {
+                printUsage(std.os.argv[0]);
+                return;
+            }
+        },
+        else => {
+            printUsage(std.os.argv[0]);
+            return;
+        },
     }
     std.debug.assert(list_a.items.len == list_b.items.len);
 
