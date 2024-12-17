@@ -30,67 +30,66 @@ pub fn processInputWithScanf(list_a: *std.ArrayList(i32), list_b: *std.ArrayList
 
 /// A buffered, character reader. This is a low-effort implementation, there's
 /// probably room for improvement.
-fn BufferedCharReader(comptime buff_size: usize) type {
-    return struct {
-        const Self = @This();
+const BufferedCharReaderBuffSize = 1024;
+const BufferedCharReader = struct {
+    const Self = @This();
 
-        done: bool,
-        index: usize,
-        size: usize,
-        file: File,
-        buff: [buff_size]u8,
+    done: bool,
+    index: usize,
+    size: usize,
+    file: File,
+    buff: [BufferedCharReaderBuffSize]u8,
 
-        pub fn init(file: File) Self {
-            return .{
-                .done = false,
-                .index = 0,
-                .size = 0,
-                .file = file,
-                .buff = undefined,
-            };
-        }
+    pub fn init(file: File) Self {
+        return .{
+            .done = false,
+            .index = 0,
+            .size = 0,
+            .file = file,
+            .buff = undefined,
+        };
+    }
 
-        fn fillBuff(self: *Self) !void {
-            self.size = try self.file.read(&self.buff);
-        }
+    fn fillBuff(self: *Self) File.ReadError!void {
+        self.size = try self.file.read(&self.buff);
+    }
 
-        pub fn getChar(self: *Self) ?u8 {
-            // Noop.
-            if (self.done) return null;
+    pub fn getChar(self: *Self) File.ReadError!?u8 {
+        // Noop.
+        if (self.done) return null;
 
-            // Fill the buffer.
-            if (self.index == self.size) {
-                self.fillBuff() catch unreachable;
-                self.index = 0;
-                if (self.size == 0) {
-                    self.done = true;
-                    return null;
-                }
-            }
-
-            const char = self.buff[self.index];
-            self.index += 1;
-            return char;
-        }
-
-        pub fn skip(self: *Self, n: usize) void {
-            for (0..n) |_| {
-                _ = self.getChar();
+        // Fill the buffer.
+        if (self.index == self.size) {
+            try self.fillBuff();
+            self.index = 0;
+            if (self.size == 0) {
+                self.done = true;
+                return null;
             }
         }
-    };
-}
+
+        // Return the next character.
+        const char = self.buff[self.index];
+        self.index += 1;
+        return char;
+    }
+
+    pub fn skip(self: *Self, n: usize) File.ReadError!void {
+        for (0..n) |_| {
+            _ = try self.getChar();
+        }
+    }
+};
 
 /// Process input using the BufferedCharReader.
 pub fn processInputWithCustomReader(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) !void {
-    const Reader = BufferedCharReader(1024);
-    var reader = Reader.init(file);
+    var reader = BufferedCharReader.init(file);
     while (!reader.done) {
         var a: i32 = 0;
         var b: i32 = 0;
 
         // Read a.
-        while (reader.getChar()) |char| {
+        while (try reader.getChar()) |char| {
             switch (char) {
                 '0'...'9' => a = (char - 48) + a * 10,
                 else => {
@@ -101,10 +100,10 @@ pub fn processInputWithCustomReader(file: std.fs.File, list_a: *std.ArrayList(i3
         }
 
         // Skip spaces.
-        reader.skip(2);
+        try reader.skip(2);
 
         // Read b.
-        while (reader.getChar()) |char| {
+        while (try reader.getChar()) |char| {
             switch (char) {
                 '0'...'9' => b = (char - 48) + b * 10,
                 else => {
@@ -127,18 +126,19 @@ pub fn main() !void {
 
     // Build the lists.
     switch (std.os.argv.len) {
-        // Use custom reader. As fast as the C version, but in pure Zig.
+        // Use a custom reader. As fast as the C version, but in pure Zig.
         1 => try processInputWithCustomReader(stdin, &list_a, &list_b),
         2 => {
             const mode_str = std.os.argv[1];
             const mode: []const u8 = std.mem.span(mode_str);
             if (std.mem.eql(u8, mode, "scanf")) {
-                // Up to 4x faster than using the Reader approach, and matches C
-                // performance.
+                // Up to 4x faster than using the Reader approach, and matches
+                // C performance. However, this uses scanf from libc, to do the
+                // heavy lifting.
                 try processInputWithScanf(&list_a, &list_b);
             } else if (std.mem.eql(u8, mode, "reader")) {
-                // Uses the std.io.Reader, and std.fmt.parseInt. This was the way
-                // I approached it initially, seemed the most "correct".
+                // Uses std.io.Reader, and std.fmt.parseInt. This is how I
+                // approached it initially, this seemed the most "correct".
                 try processInput(stdin, &list_a, &list_b);
             } else {
                 printUsage(std.os.argv[0]);
