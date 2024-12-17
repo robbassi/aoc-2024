@@ -1,4 +1,5 @@
 const std = @import("std");
+const aoc = @import("aoc.zig");
 const c = @cImport({
     @cInclude("stdio.h");
 });
@@ -28,62 +29,9 @@ pub fn processInputWithScanf(list_a: *std.ArrayList(i32), list_b: *std.ArrayList
     }
 }
 
-/// A buffered, character reader. This is a low-effort implementation, there's
-/// probably room for improvement.
-const BufferedCharReaderBuffSize = 1024;
-const BufferedCharReader = struct {
-    const Self = @This();
-
-    done: bool,
-    index: usize,
-    size: usize,
-    file: File,
-    buff: [BufferedCharReaderBuffSize]u8,
-
-    pub fn init(file: File) Self {
-        return .{
-            .done = false,
-            .index = 0,
-            .size = 0,
-            .file = file,
-            .buff = undefined,
-        };
-    }
-
-    fn fillBuff(self: *Self) File.ReadError!void {
-        self.size = try self.file.read(&self.buff);
-    }
-
-    pub fn getChar(self: *Self) File.ReadError!?u8 {
-        // Noop.
-        if (self.done) return null;
-
-        // Fill the buffer.
-        if (self.index == self.size) {
-            try self.fillBuff();
-            self.index = 0;
-            if (self.size == 0) {
-                self.done = true;
-                return null;
-            }
-        }
-
-        // Return the next character.
-        const char = self.buff[self.index];
-        self.index += 1;
-        return char;
-    }
-
-    pub fn skip(self: *Self, n: usize) File.ReadError!void {
-        for (0..n) |_| {
-            _ = try self.getChar();
-        }
-    }
-};
-
 /// Process input using the BufferedCharReader.
 pub fn processInputWithCustomReader(file: std.fs.File, list_a: *std.ArrayList(i32), list_b: *std.ArrayList(i32)) !void {
-    var reader = BufferedCharReader.init(file);
+    var reader = aoc.BufferedCharReader.init(file);
     while (!reader.done) {
         var a: i32 = 0;
         var b: i32 = 0;
